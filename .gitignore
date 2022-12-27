@@ -1,0 +1,9 @@
+.vs/
+.vsconfig
+Assembly-CSharp-Editor.csproj
+Assembly-Csharp.csproj
+Library/
+Logs/
+Practice_URP.sln
+UserSettings/
+obj/
