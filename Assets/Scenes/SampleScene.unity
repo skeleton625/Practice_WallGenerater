@@ -495,7 +495,7 @@ MonoBehaviour:
   TargetCollider: {fileID: 3719969555447156130, guid: 4ce52febfee73194cb3b85cd8ccc0ac5,
     type: 3}
   WallRadius: 2
-  WallLimitCount: 20
+  WallLimitCount: 100
   LayerMasks: 40000000
   ModelMaterial: {fileID: 2100000, guid: e57f07fb7b2ab74419d88eb592177c55, type: 2}
 --- !u!54 &401453272
