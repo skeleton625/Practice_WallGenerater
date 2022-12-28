@@ -17,16 +17,13 @@ public class Dragger : MonoBehaviour
     [SerializeField] private Transform TargetLast = null;
     [SerializeField] private Transform TargetCollider = null;
     [SerializeField] private float WallRadius = 0f;
+    [SerializeField] private int WallLimitCount = 0;
     [SerializeField] private int[] LayerMasks = null;
 
     private int preLayerMask = 0;
 
     [Header(" Material Setting"), Space(10)]
     [SerializeField] private Material ModelMaterial = null;
-
-    [Header("Test Setting"), Space(10)]
-    [SerializeField] private int TestCount = 0;
-    [SerializeField] private Transform TestTransform = null;
 
     private bool isConflict = false;
     private bool isStarted = false;
@@ -36,17 +33,10 @@ public class Dragger : MonoBehaviour
     private int nextWallRange = 0;
     private int prevWallRange = 0;
 
-    private Transform[] TestTransformArray = null;
+    private Vector3 startPosition = Vector3.zero;
 
     private void Start()
     {
-        TestTransformArray = new Transform[TestCount];
-        for (int i = 0; i < TestCount; ++i)
-        {
-            TestTransformArray[i] = Instantiate(TestTransform, Vector3.forward * WallRadius * i, Quaternion.identity);
-            TestTransformArray[i].SetParent(TestTransform.parent);
-        }
-
         for (int i = 0; i < LayerMasks.Length; ++i)
             preLayerMask += LayerMasks[i];
         preLayerMask = ~preLayerMask;
@@ -102,11 +92,13 @@ public class Dragger : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            startPosition = TargetBodyTransform.position;
+
             preWallRange = 1;
             nextWallRange = 2;
             prevWallRange = 1;
             TargetModelTransform.localScale = new Vector3(1, 2, WallRadius);
-            TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[1].position, .5f);
+            TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius, .5f);
             ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
 
             isDragging = true;
@@ -116,7 +108,7 @@ public class Dragger : MonoBehaviour
         {
             for (int i = 0; i < preWallRange; ++i)
             {
-                var position = Vector3.Lerp(TestTransformArray[i].position, TestTransformArray[i + 1].position, .5f);
+                var position = Vector3.Lerp(startPosition + TargetBodyTransform.forward * WallRadius * i, startPosition + TargetBodyTransform.forward * WallRadius * (i + 1), .5f);
                 Instantiate(WallTransform, position, TargetBodyTransform.rotation);
             }
 
@@ -141,17 +133,17 @@ public class Dragger : MonoBehaviour
                 if (hit.transform.CompareTag(CONNECTTAG))
                 {
                     var position = hit.transform.position;
-                    position.y = TestTransformArray[0].position.y;
+                    position.y = startPosition.y;
                     TargetBodyTransform.LookAt(position);
 
-                    var range = Mathf.Clamp((position - TestTransformArray[0].position).magnitude / WallRadius, 1, TestCount);
-                    if (nextWallRange < range && nextWallRange < TestCount)
+                    var range = Mathf.Clamp((position - startPosition).magnitude / WallRadius, 1, WallLimitCount);
+                    if (nextWallRange < range && nextWallRange < WallLimitCount)
                     {
                         preWallRange++;
                         nextWallRange++;
                         prevWallRange++;
                         TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
                     }
                     if (prevWallRange > range)
                     {
@@ -159,23 +151,23 @@ public class Dragger : MonoBehaviour
                         nextWallRange--;
                         prevWallRange--;
                         TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
                     }
                 }
                 else
                 {
                     var position = hit.point;
-                    position.y = TestTransformArray[0].position.y;
+                    position.y = startPosition.y;
                     TargetBodyTransform.LookAt(position);
 
-                    var range = Mathf.Clamp((position - TestTransformArray[0].position).magnitude / WallRadius, 1, TestCount);
-                    if (nextWallRange < range && nextWallRange < TestCount)
+                    var range = Mathf.Clamp((position - startPosition).magnitude / WallRadius, 1, WallLimitCount);
+                    if (nextWallRange < range && nextWallRange < WallLimitCount)
                     {
                         preWallRange++;
                         nextWallRange++;
                         prevWallRange++;
                         TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
                     }
                     if (prevWallRange > range)
                     {
@@ -183,7 +175,7 @@ public class Dragger : MonoBehaviour
                         nextWallRange--;
                         prevWallRange--;
                         TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
                     }
                 }
             }
