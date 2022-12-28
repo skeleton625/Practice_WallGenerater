@@ -3,6 +3,8 @@ using UnityEngine;
 public class Dragger : MonoBehaviour
 {
     private readonly string CONNECTTAG = "Pole";
+    private readonly string BUILDINGTAG = "Building";
+    private readonly string MATERIALCOLOR = "_BaseColor";
 
     [Header("Camera Setting"), Space(10)]
     [SerializeField] private Camera MainCamera = null;
@@ -15,11 +17,18 @@ public class Dragger : MonoBehaviour
     [SerializeField] private Transform TargetLast = null;
     [SerializeField] private Transform TargetCollider = null;
     [SerializeField] private float WallRadius = 0f;
+    [SerializeField] private int[] LayerMasks = null;
+
+    private int preLayerMask = 0;
+
+    [Header(" Material Setting"), Space(10)]
+    [SerializeField] private Material ModelMaterial = null;
 
     [Header("Test Setting"), Space(10)]
     [SerializeField] private int TestCount = 0;
     [SerializeField] private Transform TestTransform = null;
 
+    private bool isConflict = false;
     private bool isStarted = false;
     private bool isDragging = false;
 
@@ -38,6 +47,9 @@ public class Dragger : MonoBehaviour
             TestTransformArray[i].SetParent(TestTransform.parent);
         }
 
+        for (int i = 0; i < LayerMasks.Length; ++i)
+            preLayerMask += LayerMasks[i];
+        preLayerMask = ~preLayerMask;
     }
 
     private void Update()
@@ -63,7 +75,7 @@ public class Dragger : MonoBehaviour
         if (!isDragging)
         {
             var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit, 1000, -1))
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000, preLayerMask))
             {
                 Vector3 position;
                 if (hit.transform.CompareTag(CONNECTTAG))
@@ -95,8 +107,10 @@ public class Dragger : MonoBehaviour
             prevWallRange = 1;
             TargetModelTransform.localScale = new Vector3(1, 2, WallRadius);
             TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[1].position, .5f);
+            ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
 
             isDragging = true;
+            isConflict = false;
         }
         if (Input.GetMouseButtonUp(0))
         {
@@ -122,39 +136,75 @@ public class Dragger : MonoBehaviour
         if (isDragging)
         {
             var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit, 1000, -1))
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000, preLayerMask))
             {
-                Vector3 position;
                 if (hit.transform.CompareTag(CONNECTTAG))
                 {
-                    position = hit.transform.position;
+                    var position = hit.transform.position;
+                    position.y = TestTransformArray[0].position.y;
+                    TargetBodyTransform.LookAt(position);
+
+                    var range = Mathf.Clamp((position - TestTransformArray[0].position).magnitude / WallRadius, 1, TestCount);
+                    if (nextWallRange < range && nextWallRange < TestCount)
+                    {
+                        preWallRange++;
+                        nextWallRange++;
+                        prevWallRange++;
+                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
+                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                    }
+                    if (prevWallRange > range)
+                    {
+                        preWallRange--;
+                        nextWallRange--;
+                        prevWallRange--;
+                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
+                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                    }
                 }
                 else
                 {
-                    position = hit.point;
-                }
+                    var position = hit.point;
+                    position.y = TestTransformArray[0].position.y;
+                    TargetBodyTransform.LookAt(position);
 
-                position.y = TestTransformArray[0].position.y;
-                TargetBodyTransform.LookAt(position);
-
-                var range = Mathf.Clamp((position - TestTransformArray[0].position).magnitude / WallRadius, 1, TestCount);
-                if (nextWallRange < range && nextWallRange < TestCount)
-                {
-                    preWallRange++;
-                    nextWallRange++;
-                    prevWallRange++;
-                    TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                    TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
-                }
-                if (prevWallRange > range)
-                {
-                    preWallRange--;
-                    nextWallRange--;
-                    prevWallRange--;
-                    TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                    TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                    var range = Mathf.Clamp((position - TestTransformArray[0].position).magnitude / WallRadius, 1, TestCount);
+                    if (nextWallRange < range && nextWallRange < TestCount)
+                    {
+                        preWallRange++;
+                        nextWallRange++;
+                        prevWallRange++;
+                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
+                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                    }
+                    if (prevWallRange > range)
+                    {
+                        preWallRange--;
+                        nextWallRange--;
+                        prevWallRange--;
+                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
+                        TargetModelTransform.position = Vector3.Lerp(TestTransformArray[0].position, TestTransformArray[preWallRange].position, .5f);
+                    }
                 }
             }
+        }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.CompareTag(BUILDINGTAG) && !isConflict)
+        {
+            ModelMaterial.SetColor(MATERIALCOLOR, Color.red);
+            isConflict = true;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag(BUILDINGTAG))
+        {
+            ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
+            isConflict = false;
         }
     }
 }

@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3719969555447156130}
   - component: {fileID: 3719969555447156131}
-  m_Layer: 2
+  m_Layer: 0
   m_Name: Collider
   m_TagString: Pole
   m_Icon: {fileID: 0}
