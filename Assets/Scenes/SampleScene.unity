@@ -122,7 +122,7 @@ NavMeshSettings:
     preserveTilesOutsideBounds: 0
     debug:
       m_Flags: 0
-  m_NavMeshData: {fileID: 0}
+  m_NavMeshData: {fileID: 23800000, guid: fd42af1d1f6130e41ad24446b455ccaa, type: 2}
 --- !u!1 &100802551
 GameObject:
   m_ObjectHideFlags: 0
@@ -492,7 +492,7 @@ GameObject:
   m_Component:
   - component: {fileID: 401453270}
   - component: {fileID: 401453272}
-  - component: {fileID: 401453271}
+  - component: {fileID: 401453273}
   m_Layer: 0
   m_Name: Model_Wall_Body
   m_TagString: Untagged
@@ -516,34 +516,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &401453271
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 401453269}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5e81d1c4ed1a7a46abac88e7ff4f318, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MainCamera: {fileID: 330585545}
-  WallTransform: {fileID: 2191008990824360119, guid: 7a86238584ae01f4f8cc8d0766834a93,
-    type: 3}
-  TargetModelTransform: {fileID: 174544553}
-  TargetBodyTransform: {fileID: 401453270}
-  TargetFirst: {fileID: 923268513}
-  TargetLast: {fileID: 682721257}
-  TargetCollider: {fileID: 3719969555447156130, guid: 4ce52febfee73194cb3b85cd8ccc0ac5,
-    type: 3}
-  WallRadius: 3
-  GenerateLayerMask: 0400000040000000
-  RemoveLayerMask: 0100000004000000
-  ModelMaterial: {fileID: 2100000, guid: e57f07fb7b2ab74419d88eb592177c55, type: 2}
-  WallColor: {r: 0.5568628, g: 0.5568628, b: 0.5568628, a: 1}
-  SelectColor: {r: 0.96575654, g: 1, b: 0, a: 1}
-  GenerateUI: {fileID: 2006514715}
 --- !u!54 &401453272
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -560,6 +532,32 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 3
+--- !u!114 &401453273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 401453269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5e81d1c4ed1a7a46abac88e7ff4f318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MainCamera: {fileID: 330585545}
+  TargetModelTransform: {fileID: 174544553}
+  TargetBodyTransform: {fileID: 401453270}
+  WallPrefabTransform: {fileID: 2191008990824360119, guid: 7a86238584ae01f4f8cc8d0766834a93,
+    type: 3}
+  TargetCollider: {fileID: 3719969555447156130, guid: 4ce52febfee73194cb3b85cd8ccc0ac5,
+    type: 3}
+  WallRadius: 3
+  GenerateLayerMask: 0400000040000000
+  RemoveLayerMask: 0100000004000000
+  ModelMaterial: {fileID: 2100000, guid: e57f07fb7b2ab74419d88eb592177c55, type: 2}
+  WallColor: {r: 0.5568628, g: 0.5568628, b: 0.5568628, a: 1}
+  SelectColor: {r: 0.9788537, g: 1, b: 0, a: 1}
+  WorkingUI: {fileID: 2006514715}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -988,7 +986,7 @@ MonoBehaviour:
   CameraTransform: {fileID: 330585546}
   MoveScale: 0.05
   RotateScale: 1.5
-  WallGenerator: {fileID: 401453271}
+  wallGenerator: {fileID: 401453273}
 --- !u!1 &1132738631
 GameObject:
   m_ObjectHideFlags: 0
