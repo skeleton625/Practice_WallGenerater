@@ -9,16 +9,16 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float RotateScale = 1f;
 
     [Header("Generate Setting"), Space(10)]
-    [SerializeField] private Dragger WallGenerator = null;
+    [SerializeField] private WallGenerator wallGenerator = null;
 
     private void Update()
     {
         MoveCamera();
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
-            WallGenerator.StartInstallWall();
+            wallGenerator.StartInstallWall();
         if (Input.GetKeyDown(KeyCode.Alpha2))
-            WallGenerator.StartRemoveWall();
+            wallGenerator.StartRemoveWall();
     }
 
     private void MoveCamera()

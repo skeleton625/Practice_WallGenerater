@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Dragger : MonoBehaviour
+public class WallGenerator : MonoBehaviour
 {
     private readonly string CONNECTTAG = "Pole";
     private readonly string BUILDINGTAG = "Building";
@@ -10,11 +10,9 @@ public class Dragger : MonoBehaviour
     [SerializeField] private Camera MainCamera = null;
 
     [Header("Target Setting"), Space(10)]
-    [SerializeField] private Transform WallTransform = null;
     [SerializeField] private Transform TargetModelTransform = null;
     [SerializeField] private Transform TargetBodyTransform = null;
-    [SerializeField] private Transform TargetFirst = null;
-    [SerializeField] private Transform TargetLast = null;
+    [SerializeField] private Transform WallPrefabTransform = null;
     [SerializeField] private Transform TargetCollider = null;
     [SerializeField] private float WallRadius = 0f;
     [SerializeField] private int[] GenerateLayerMask = null;
@@ -29,7 +27,7 @@ public class Dragger : MonoBehaviour
     [SerializeField] private Color SelectColor = default;
 
     [Header("UI Setting"), Space(10)]
-    [SerializeField] private GenerateTypeUI GenerateUI = null;
+    [SerializeField] private WorkingTypeUI WorkingUI = null;
 
     private byte generateType = 0;
 
@@ -84,12 +82,13 @@ public class Dragger : MonoBehaviour
         }
     }
 
+    #region Wall Functions
     public void StartInstallWall()
     {
         if (generateType.Equals(0))
         {
             generateType = 1;
-            GenerateUI.SetGenerateType(1);
+            WorkingUI.SetGenerateType(1);
             ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
             TargetModelTransform.gameObject.SetActive(true);
         }
@@ -100,9 +99,10 @@ public class Dragger : MonoBehaviour
         if (generateType.Equals(0))
         {
             generateType = 2;
-            GenerateUI.SetGenerateType(2);
+            WorkingUI.SetGenerateType(2);
         }
     }
+    #endregion
 
     #region Generate Wall Functions
     private void MoveBlock()
@@ -176,7 +176,7 @@ public class Dragger : MonoBehaviour
                         lastPosition = startPosition + TargetBodyTransform.forward * WallRadius * nextWallRange;
                         position = Vector3.Lerp(prevPosition, lastPosition, .5f);
 
-                        Instantiate(WallTransform, position, TargetBodyTransform.rotation);
+                        Instantiate(WallPrefabTransform, position, TargetBodyTransform.rotation);
                         if (!isConnectFirst)
                         {
                             collider = Instantiate(TargetCollider, prevPosition, TargetBodyTransform.rotation);
@@ -193,7 +193,7 @@ public class Dragger : MonoBehaviour
                             prevPosition = startPosition + TargetBodyTransform.forward * WallRadius * preWallRange;
                             lastPosition = startPosition + TargetBodyTransform.forward * WallRadius * nextWallRange;
                             position = Vector3.Lerp(prevPosition, lastPosition, .5f);
-                            Instantiate(WallTransform, position, TargetBodyTransform.rotation);
+                            Instantiate(WallPrefabTransform, position, TargetBodyTransform.rotation);
                             preWallRange++;
                             nextWallRange++;
 
@@ -204,10 +204,14 @@ public class Dragger : MonoBehaviour
                         // LAST
                         prevPosition = startPosition + TargetBodyTransform.forward * WallRadius * preWallRange;
                         lastPosition = startPosition + TargetBodyTransform.forward * TargetModelTransform.localScale.z;
-                        position = Vector3.Lerp(prevPosition, lastPosition, .5f);
+                        var lastDist = maxWallDist + WallRadius - preWallDist;
+                        if (lastDist > .01f)
+                        {
+                            position = Vector3.Lerp(prevPosition, lastPosition, .5f);
 
-                        var lastWall = Instantiate(WallTransform, position, TargetBodyTransform.rotation);
-                        lastWall.localScale = new Vector3(1, 2, maxWallDist + WallRadius - preWallDist);
+                            var lastWall = Instantiate(WallPrefabTransform, position, TargetBodyTransform.rotation);
+                            lastWall.localScale = new Vector3(1, 2, lastDist);
+                        }
                         if (!isConnectLast)
                         {
                             collider = Instantiate(TargetCollider, lastPosition, TargetBodyTransform.rotation);
@@ -220,7 +224,7 @@ public class Dragger : MonoBehaviour
                         {
                             var prevPosition = startPosition + TargetBodyTransform.forward * WallRadius * i;
                             var position = Vector3.Lerp(prevPosition, startPosition + TargetBodyTransform.forward * WallRadius * (i + 1), .5f);
-                            Instantiate(WallTransform, position, TargetBodyTransform.rotation);
+                            Instantiate(WallPrefabTransform, position, TargetBodyTransform.rotation);
 
                             collider = Instantiate(TargetCollider, prevPosition, TargetBodyTransform.rotation);
                             collider.gameObject.SetActive(true);
@@ -233,13 +237,17 @@ public class Dragger : MonoBehaviour
                 }
 
                 CancelGenerateWall();
-                GenerateUI.SetGenerateType(0);
+                WorkingUI.SetGenerateType(0);
             }
             else
             {
                 if (isConnectLast)
                 {
-                    if (!hit.transform.CompareTag(CONNECTTAG)) isConnectLast = false;
+                    if (!hit.transform.CompareTag(CONNECTTAG))
+                    {
+                        isConnectLast = false;
+                        if (preWallRange.Equals(0)) TargetModelTransform.gameObject.SetActive(false);
+                    }
                     return;
                 }
                 else if (hit.transform.CompareTag(CONNECTTAG))
@@ -255,6 +263,8 @@ public class Dragger : MonoBehaviour
                     if (dist < WallRadius) TargetModelTransform.gameObject.SetActive(false);
                     else TargetModelTransform.gameObject.SetActive(true);
                     isConnectLast = true;
+
+                    if (TargetModelTransform.gameObject.activeSelf) TargetModelTransform.gameObject.SetActive(true);
                 }
                 else
                 {
@@ -301,7 +311,7 @@ public class Dragger : MonoBehaviour
         isConnectFirst = false;
         isConnectLast = false;
 
-        GenerateUI.SetGenerateType(0);
+        WorkingUI.SetGenerateType(0);
         generateType = 0;
     }
     #endregion
@@ -343,7 +353,7 @@ public class Dragger : MonoBehaviour
             selectedRenderer = null;
         }
 
-        GenerateUI.SetGenerateType(0);
+        WorkingUI.SetGenerateType(0);
         generateType = 0;
     }
     #endregion
@@ -369,11 +379,15 @@ public class Dragger : MonoBehaviour
             SetModelConflict(false);
         else if (other.CompareTag(BUILDINGTAG) && !isConflict)
             SetModelConflict(true);
+        /*
+        if (other.CompareTag(BUILDINGTAG) && !isConflict)
+            SetModelConflict(true);
+        */
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag(BUILDINGTAG))
+        if (other.CompareTag(BUILDINGTAG) && isConflict)
             SetModelConflict(false);
     }
     #endregion

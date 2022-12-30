@@ -1,7 +1,7 @@
 using UnityEngine;
 using TMPro;
 
-public class GenerateTypeUI : MonoBehaviour
+public class WorkingTypeUI : MonoBehaviour
 {
     [Header("Type UI Setting"), Space(10)]
     [SerializeField] private TextMeshProUGUI TypeUI = null;
