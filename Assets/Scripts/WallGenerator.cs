@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class WallGenerator : MonoBehaviour
@@ -14,6 +15,7 @@ public class WallGenerator : MonoBehaviour
     [SerializeField] private Transform TargetBodyTransform = null;
     [SerializeField] private Transform WallPrefabTransform = null;
     [SerializeField] private Transform TargetCollider = null;
+    [SerializeField] private TagCollider ModelCollider = null;
     [SerializeField] private float WallRadius = 0f;
     [SerializeField] private int[] GenerateLayerMask = null;
     [SerializeField] private int[] RemoveLayerMask = null;
@@ -31,7 +33,6 @@ public class WallGenerator : MonoBehaviour
 
     private byte generateType = 0;
 
-    private bool isConflict = false;
     private bool isDragging = false;
     private bool isConnectFirst = false;
     private bool isConnectLast = false;
@@ -90,7 +91,9 @@ public class WallGenerator : MonoBehaviour
             generateType = 1;
             WorkingUI.SetGenerateType(1);
             ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
+            
             TargetModelTransform.gameObject.SetActive(true);
+            ModelCollider.enabled = true;
         }
     }
 
@@ -115,13 +118,29 @@ public class WallGenerator : MonoBehaviour
             Vector3 position;
             if (hit.transform.CompareTag(CONNECTTAG))
             {
-                isConnectFirst = true;
+                if (!isConnectFirst)
+                {
+                    isConnectFirst = true;
+                    ModelCollider.enabled = false;
+                }
+
                 position = hit.transform.position;
+
+                if (Input.GetMouseButtonDown(0))
+                    StartDrag();
             }
             else
             {
-                isConnectFirst = false;
+                if (isConnectFirst)
+                {
+                    isConnectFirst = false;
+                    ModelCollider.enabled = true;
+                }
+
                 position = hit.point;
+
+                if (!ModelCollider.IsConflict && Input.GetMouseButtonDown(0))
+                    StartDrag();
             }
             position.y = TargetModelTransform.localScale.y / 2;
 
@@ -132,7 +151,7 @@ public class WallGenerator : MonoBehaviour
             TargetBodyTransform.position = position;
         }
 
-        if (!isConflict && Input.GetMouseButtonDown(0))
+        void StartDrag()
         {
             startPosition = TargetBodyTransform.position;
 
@@ -141,8 +160,8 @@ public class WallGenerator : MonoBehaviour
             prevWallRange = 1;
             TargetModelTransform.localScale = new Vector3(1, 2, WallRadius);
             TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius, .5f);
+            TargetModelTransform.gameObject.SetActive(false);
 
-            isConflict = false;
             isDragging = true;
             isConnectLast = false;
         }
@@ -157,7 +176,7 @@ public class WallGenerator : MonoBehaviour
         {
             if (Input.GetMouseButtonUp(0))
             {
-                if (!isConflict && TargetModelTransform.gameObject.activeSelf)
+                if (!ModelCollider.IsConflict && TargetModelTransform.gameObject.activeSelf)
                 {
                     Transform collider;
                     if (isConnectLast)
@@ -257,14 +276,24 @@ public class WallGenerator : MonoBehaviour
                     TargetBodyTransform.LookAt(position);
 
                     var dist = (startPosition - position).magnitude;
+
+                    position = Vector3.Lerp(startPosition, position, .5f);
                     TargetModelTransform.localScale = new Vector3(1, 2, dist);
-                    TargetModelTransform.position = Vector3.Lerp(startPosition, position, .5f);
+                    TargetModelTransform.position = position;
+                    ModelCollider.transform.localScale = new Vector3(1, 2, dist - 2f);
+                    ModelCollider.transform.position = position;
 
-                    if (dist < WallRadius) TargetModelTransform.gameObject.SetActive(false);
-                    else TargetModelTransform.gameObject.SetActive(true);
+                    if (dist < WallRadius)
+                    {
+                        TargetModelTransform.gameObject.SetActive(false);
+                        ModelCollider.enabled = false;
+                    }
+                    else
+                    {
+                        TargetModelTransform.gameObject.SetActive(true);
+                        ModelCollider.enabled = true;
+                    }
                     isConnectLast = true;
-
-                    if (TargetModelTransform.gameObject.activeSelf) TargetModelTransform.gameObject.SetActive(true);
                 }
                 else
                 {
@@ -278,20 +307,35 @@ public class WallGenerator : MonoBehaviour
                         preWallRange++;
                         nextWallRange++;
                         prevWallRange++;
-                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
 
-                        if (preWallRange.Equals(1)) TargetModelTransform.gameObject.SetActive(true);
+                        position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
+                        TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
+                        TargetModelTransform.position = position;
+                        ModelCollider.transform.localScale = new Vector3(1, 2, WallRadius * preWallRange - 2f);
+                        ModelCollider.transform.position = position;
+
+                        if (preWallRange.Equals(1))
+                        {
+                            TargetModelTransform.gameObject.SetActive(true);
+                            ModelCollider.enabled = true;
+                        }
                     }
                     if (prevWallRange > range)
                     {
                         preWallRange--;
                         nextWallRange--;
                         prevWallRange--;
+                        position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
                         TargetModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        TargetModelTransform.position = Vector3.Lerp(startPosition, startPosition + TargetBodyTransform.forward * WallRadius * preWallRange, .5f);
+                        TargetModelTransform.position = position;
+                        ModelCollider.transform.localScale = new Vector3(1, 2, WallRadius * preWallRange - 2f);
+                        ModelCollider.transform.position = position;
 
-                        if (preWallRange.Equals(0)) TargetModelTransform.gameObject.SetActive(false);
+                        if (preWallRange.Equals(0))
+                        {
+                            TargetModelTransform.gameObject.SetActive(false);
+                            ModelCollider.enabled = false;
+                        }
                     }
                 }
             }
@@ -306,11 +350,13 @@ public class WallGenerator : MonoBehaviour
         TargetBodyTransform.rotation = Quaternion.identity;
         TargetBodyTransform.position = Vector3.zero;
 
-        isConflict = false;
         isDragging = false;
         isConnectFirst = false;
         isConnectLast = false;
 
+        ModelCollider.transform.localScale = new Vector3(.5f, 2, .5f);
+        ModelCollider.transform.localPosition = Vector3.zero;
+        ModelCollider.enabled = false;
         WorkingUI.SetGenerateType(0);
         generateType = 0;
     }
@@ -359,36 +405,10 @@ public class WallGenerator : MonoBehaviour
     #endregion
 
     #region Conflict Wall Functions
-    private void SetModelConflict(bool isConflict)
+    public void SetModelConflict(bool isConflict)
     {
-        if (isConflict)
-        {
-            ModelMaterial.SetColor(MATERIALCOLOR, Color.red);
-            this.isConflict = true;
-        }
-        else
-        {
-            ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
-            this.isConflict = false;
-        }
-    }
-
-    private void OnTriggerStay(Collider other)
-    {
-        if (isConnectFirst || isConnectLast)
-            SetModelConflict(false);
-        else if (other.CompareTag(BUILDINGTAG) && !isConflict)
-            SetModelConflict(true);
-        /*
-        if (other.CompareTag(BUILDINGTAG) && !isConflict)
-            SetModelConflict(true);
-        */
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag(BUILDINGTAG) && isConflict)
-            SetModelConflict(false);
+        if (isConflict) ModelMaterial.SetColor(MATERIALCOLOR, Color.red);
+        else ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
     }
     #endregion
 }
