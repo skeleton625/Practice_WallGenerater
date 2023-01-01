@@ -6,7 +6,7 @@ TagManager:
   tags:
   - Terrain
   - Pole
-  - Building
+  - Wall
   layers:
   - Default
   - TransparentFX

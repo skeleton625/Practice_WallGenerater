@@ -12,7 +12,8 @@ public class WorkingTypeUI : MonoBehaviour
         {
             case 0: TypeUI.text = "None"; break;
             case 1: TypeUI.text = "Generate Wall"; break;
-            case 2: TypeUI.text = "Remove Wall"; break;
+            case 2: TypeUI.text = "Generate Gate"; break;
+            case 3: TypeUI.text = "Remove Wall"; break;
         }
     }
 }

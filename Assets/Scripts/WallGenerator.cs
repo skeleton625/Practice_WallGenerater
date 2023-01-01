@@ -1,41 +1,25 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class WallGenerator : MonoBehaviour
 {
     private readonly string CONNECTTAG = "Pole";
-    private readonly string BUILDINGTAG = "Building";
+    private readonly string WALLTAG = "Wall";
     private readonly string MATERIALCOLOR = "_BaseColor";
 
-    [Header("Camera Setting"), Space(10)]
+    [Header("Camera Setting")]
     [SerializeField] private Camera MainCamera = null;
+    [Space(10)]
 
-    [Header("Collider Setting"), Space(10)]
-    [SerializeField] private Transform PoleCollider = null;
-    [SerializeField] private TagCollider ModelCollider = null;
-
-    [Header("Wall Setting"), Space(10)]
+    [Header("Wall Setting")]
     [SerializeField] private Transform WallModelTransform = null;
     [SerializeField] private Transform WallBodyTransform = null;
     [SerializeField] private Transform WallPrefabTransform = null;
+    [SerializeField] private TagCollider WallModelCollider = null;
     [SerializeField] private float WallRadius = 0f;
     [SerializeField] private int[] GenerateLayerMask = null;
     [SerializeField] private int[] RemoveLayerMask = null;
-
-    [Header("Gate Setting"), Space(10)]
-    [SerializeField] private Transform GateModelTransform = null;
-
-    private int generateLayerMask = 0;
-    private int removeLayerMask = 0;
-
-    [Header("Material Setting"), Space(10)]
-    [SerializeField] private Material ModelMaterial = null;
-    [SerializeField] private Color WallColor = default;
-    [SerializeField] private Color SelectColor = default;
-
-    [Header("UI Setting"), Space(10)]
-    [SerializeField] private WorkingTypeUI WorkingUI = null;
-
-    private byte generateType = 0;
+    [Space(10)]
 
     private bool isDragging = false;
     private bool isConnectFirst = false;
@@ -44,10 +28,34 @@ public class WallGenerator : MonoBehaviour
     private int preWallRange = 0;
     private int nextWallRange = 0;
     private int prevWallRange = 0;
+    private int prevConnectHashCode = 0;
+
+    private int generateLayerMask = 0;
+    private int removeLayerMask = 0;
 
     private Vector3 startPosition = Vector3.zero;
 
     private MeshRenderer selectedRenderer = null;
+
+    [Header("Gate Setting")]
+    [SerializeField] private Transform GateModelTransform = null;
+    [SerializeField] private TagCollider GateModelCollider = null;
+    [Space(10)]
+
+    private bool isSnapped = false;
+    private Transform selectedWall = null;
+
+    [Header("Material Setting")]
+    [SerializeField] private Material ModelMaterial = null;
+    [SerializeField] private Color WallColor = default;
+    [SerializeField] private Color SelectColor = default;
+    [Space(10)]
+
+    [Header("UI Setting")]
+    [SerializeField] private WorkingTypeUI WorkingUI = null;
+    [Space(10)]
+
+    private byte generateType = 0;
 
     private void Start()
     {
@@ -93,7 +101,7 @@ public class WallGenerator : MonoBehaviour
         }
     }
 
-    #region Wall Functions
+    #region Start Functions
     public void StartInstallWall()
     {
         if (generateType.Equals(0))
@@ -101,9 +109,9 @@ public class WallGenerator : MonoBehaviour
             generateType = 1;
             WorkingUI.SetGenerateType(1);
             ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
-            
+
             WallModelTransform.gameObject.SetActive(true);
-            ModelCollider.enabled = true;
+            WallModelCollider.enabled = true;
         }
     }
 
@@ -111,7 +119,11 @@ public class WallGenerator : MonoBehaviour
     {
         if (generateType.Equals(0))
         {
+            generateType = 2;
+            WorkingUI.SetGenerateType(2);
 
+            GateModelTransform.gameObject.SetActive(true);
+            GateModelCollider.enabled = true;
         }
     }
 
@@ -119,8 +131,8 @@ public class WallGenerator : MonoBehaviour
     {
         if (generateType.Equals(0))
         {
-            generateType = 2;
-            WorkingUI.SetGenerateType(2);
+            generateType = 3;
+            WorkingUI.SetGenerateType(3);
         }
     }
     #endregion
@@ -139,7 +151,7 @@ public class WallGenerator : MonoBehaviour
                 if (!isConnectFirst)
                 {
                     isConnectFirst = true;
-                    ModelCollider.enabled = false;
+                    WallModelCollider.enabled = false;
                 }
 
                 position = hit.transform.position;
@@ -152,12 +164,12 @@ public class WallGenerator : MonoBehaviour
                 if (isConnectFirst)
                 {
                     isConnectFirst = false;
-                    ModelCollider.enabled = true;
+                    WallModelCollider.enabled = true;
                 }
 
                 position = hit.point;
 
-                if (!ModelCollider.IsConflict && Input.GetMouseButtonDown(0))
+                if (!WallModelCollider.IsConflict && Input.GetMouseButtonDown(0))
                     StartDrag();
             }
             position.y = WallModelTransform.localScale.y / 2;
@@ -194,33 +206,16 @@ public class WallGenerator : MonoBehaviour
         {
             if (Input.GetMouseButtonUp(0))
             {
-                if (!ModelCollider.IsConflict && WallModelTransform.gameObject.activeSelf)
+                if (!WallModelCollider.IsConflict && WallModelTransform.gameObject.activeSelf)
                 {
-                    Transform collider;
                     if (isConnectLast)
                     {
-                        var preWallDist = WallRadius;
+                        var preWallDist = 0f;
                         var maxWallDist = WallModelTransform.localScale.z - WallRadius;
                         Vector3 prevPosition;
-                        Vector3 lastPosition;
-                        Vector3 position;
-
+                        Vector3 nextPosition;
                         preWallRange = 0;
                         nextWallRange = 1;
-
-                        // FIRST
-                        prevPosition = startPosition + WallBodyTransform.forward * WallRadius * preWallRange;
-                        lastPosition = startPosition + WallBodyTransform.forward * WallRadius * nextWallRange;
-                        position = Vector3.Lerp(prevPosition, lastPosition, .5f);
-
-                        Instantiate(WallPrefabTransform, position, WallBodyTransform.rotation);
-                        if (!isConnectFirst)
-                        {
-                            collider = Instantiate(PoleCollider, prevPosition, WallBodyTransform.rotation);
-                            collider.gameObject.SetActive(true);
-                        }
-                        preWallRange++;
-                        nextWallRange++;
 
                         // MIDDILE
                         while (preWallDist < maxWallDist)
@@ -228,41 +223,25 @@ public class WallGenerator : MonoBehaviour
                             preWallDist += WallRadius;
 
                             prevPosition = startPosition + WallBodyTransform.forward * WallRadius * preWallRange;
-                            lastPosition = startPosition + WallBodyTransform.forward * WallRadius * nextWallRange;
-                            position = Vector3.Lerp(prevPosition, lastPosition, .5f);
-                            Instantiate(WallPrefabTransform, position, WallBodyTransform.rotation);
+                            nextPosition = startPosition + WallBodyTransform.forward * WallRadius * nextWallRange;
+                            GenerateWall(prevPosition, nextPosition, WallRadius);
                             preWallRange++;
                             nextWallRange++;
-
-                            collider = Instantiate(PoleCollider, prevPosition, WallBodyTransform.rotation);
-                            collider.gameObject.SetActive(true);
                         }
 
                         // LAST
-                        prevPosition = startPosition + WallBodyTransform.forward * WallRadius * preWallRange;
-                        lastPosition = startPosition + WallBodyTransform.forward * WallModelTransform.localScale.z;
                         var lastDist = maxWallDist + WallRadius - preWallDist;
                         if (lastDist > .01f)
                         {
-                            position = Vector3.Lerp(prevPosition, lastPosition, .5f);
-
-                            var lastWall = Instantiate(WallPrefabTransform, position, WallBodyTransform.rotation);
-                            lastWall.localScale = new Vector3(1, 2, lastDist);
+                            prevPosition = startPosition + WallBodyTransform.forward * WallRadius * preWallRange;
+                            nextPosition = startPosition + WallBodyTransform.forward * WallModelTransform.localScale.z;
+                            GenerateWall(prevPosition, nextPosition, lastDist);
                         }
                     }
                     else
                     {
                         for (int i = 0; i < preWallRange; ++i)
-                        {
-                            var prevPosition = startPosition + WallBodyTransform.forward * WallRadius * i;
-                            var position = Vector3.Lerp(prevPosition, startPosition + WallBodyTransform.forward * WallRadius * (i + 1), .5f);
-                            Instantiate(WallPrefabTransform, position, WallBodyTransform.rotation);
-
-                            collider = Instantiate(PoleCollider, prevPosition, WallBodyTransform.rotation);
-                            collider.gameObject.SetActive(true);
-                        }
-                        collider = Instantiate(PoleCollider, startPosition + WallBodyTransform.forward * WallRadius * preWallRange, WallBodyTransform.rotation);
-                        collider.gameObject.SetActive(true);
+                            GenerateWall(startPosition + WallBodyTransform.forward * WallRadius * i, startPosition + WallBodyTransform.forward * WallRadius * (i + 1), WallRadius);
                     }
 
                     WallModelTransform.gameObject.SetActive(false);
@@ -275,7 +254,7 @@ public class WallGenerator : MonoBehaviour
             {
                 if (isConnectLast)
                 {
-                    if (!hit.transform.CompareTag(CONNECTTAG))
+                    if (prevConnectHashCode.Equals(hit.transform.GetHashCode()) || !hit.transform.CompareTag(CONNECTTAG))
                     {
                         isConnectLast = false;
                         if (preWallRange.Equals(0)) WallModelTransform.gameObject.SetActive(false);
@@ -284,28 +263,26 @@ public class WallGenerator : MonoBehaviour
                 }
                 else if (hit.transform.CompareTag(CONNECTTAG))
                 {
+
                     var position = hit.transform.position;
                     position.y = startPosition.y;
                     WallBodyTransform.LookAt(position);
 
                     var dist = (startPosition - position).magnitude;
-
-                    position = Vector3.Lerp(startPosition, position, .5f);
-                    WallModelTransform.localScale = new Vector3(1, 2, dist);
-                    WallModelTransform.position = position;
-                    ModelCollider.transform.localScale = new Vector3(1, 2, dist - 2f);
-                    ModelCollider.transform.position = position;
+                    SetWallModelTransform(dist, Vector3.Lerp(startPosition, position, .5f));
 
                     if (dist < WallRadius)
                     {
                         WallModelTransform.gameObject.SetActive(false);
-                        ModelCollider.enabled = false;
+                        WallModelCollider.enabled = false;
                     }
                     else
                     {
                         WallModelTransform.gameObject.SetActive(true);
-                        ModelCollider.enabled = true;
+                        WallModelCollider.enabled = true;
                     }
+
+                    prevConnectHashCode = hit.transform.GetHashCode();
                     isConnectLast = true;
                 }
                 else
@@ -320,17 +297,12 @@ public class WallGenerator : MonoBehaviour
                         preWallRange++;
                         nextWallRange++;
                         prevWallRange++;
-
-                        position = Vector3.Lerp(startPosition, startPosition + WallBodyTransform.forward * WallRadius * preWallRange, .5f);
-                        WallModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        WallModelTransform.position = position;
-                        ModelCollider.transform.localScale = new Vector3(1, 2, WallRadius * preWallRange - 2f);
-                        ModelCollider.transform.position = position;
+                        SetWallModelTransform(WallRadius * preWallRange, Vector3.Lerp(startPosition, startPosition + WallBodyTransform.forward * WallRadius * preWallRange, .5f));
 
                         if (preWallRange.Equals(1))
                         {
                             WallModelTransform.gameObject.SetActive(true);
-                            ModelCollider.enabled = true;
+                            WallModelCollider.enabled = true;
                         }
                     }
                     if (prevWallRange > range)
@@ -338,20 +310,31 @@ public class WallGenerator : MonoBehaviour
                         preWallRange--;
                         nextWallRange--;
                         prevWallRange--;
-                        position = Vector3.Lerp(startPosition, startPosition + WallBodyTransform.forward * WallRadius * preWallRange, .5f);
-                        WallModelTransform.localScale = new Vector3(1, 2, WallRadius * preWallRange);
-                        WallModelTransform.position = position;
-                        ModelCollider.transform.localScale = new Vector3(1, 2, WallRadius * preWallRange - 2f);
-                        ModelCollider.transform.position = position;
+                        SetWallModelTransform(WallRadius * preWallRange, Vector3.Lerp(startPosition, startPosition + WallBodyTransform.forward * WallRadius * preWallRange, .5f));
 
                         if (preWallRange.Equals(0))
                         {
                             WallModelTransform.gameObject.SetActive(false);
-                            ModelCollider.enabled = false;
+                            WallModelCollider.enabled = false;
                         }
                     }
                 }
             }
+        }
+
+        void SetWallModelTransform(float dist, Vector3 position)
+        {
+            WallModelTransform.localScale = new Vector3(1, 2, dist);
+            WallModelTransform.position = position;
+            WallModelCollider.transform.localScale = new Vector3(1, 2, dist - 2f);
+            WallModelCollider.transform.position = position;
+        }
+
+        void GenerateWall(Vector3 prevPosition, Vector3 nextPosition, float dist)
+        {
+            var position = Vector3.Lerp(prevPosition, nextPosition, .5f);
+            var wall = Instantiate(WallPrefabTransform, position, WallBodyTransform.rotation);
+            wall.transform.GetChild(0).localScale = new Vector3(1, 2, dist);
         }
     }
     
@@ -366,10 +349,11 @@ public class WallGenerator : MonoBehaviour
         isDragging = false;
         isConnectFirst = false;
         isConnectLast = false;
+        prevConnectHashCode = 0;
 
-        ModelCollider.transform.localScale = new Vector3(.5f, 2, .5f);
-        ModelCollider.transform.localPosition = Vector3.zero;
-        ModelCollider.enabled = false;
+        WallModelCollider.transform.localScale = new Vector3(.5f, 2, .5f);
+        WallModelCollider.transform.localPosition = Vector3.zero;
+        WallModelCollider.enabled = false;
         WorkingUI.SetGenerateType(0);
         generateType = 0;
     }
@@ -386,9 +370,9 @@ public class WallGenerator : MonoBehaviour
                 selectedRenderer.material.SetColor(MATERIALCOLOR, WallColor);
                 selectedRenderer = null;
             }
-            if (selectedRenderer == null && hit.transform.CompareTag(BUILDINGTAG))
+            if (selectedRenderer == null && hit.transform.CompareTag(WALLTAG))
             {
-                selectedRenderer = hit.transform.GetComponent<MeshRenderer>();
+                selectedRenderer = hit.transform.GetChild(0).GetComponent<MeshRenderer>();
                 selectedRenderer.material.SetColor(MATERIALCOLOR, SelectColor);
             }
         }
@@ -400,7 +384,8 @@ public class WallGenerator : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0) && selectedRenderer != null)
         {
-            DestroyImmediate(selectedRenderer.gameObject);
+            DestroyImmediate(selectedRenderer.transform.parent.gameObject);
+            selectedRenderer = null;
         }
     }
 
@@ -420,12 +405,46 @@ public class WallGenerator : MonoBehaviour
     #region Generate Gate Functions
     private void MoveGateModel()
     {
-
+        var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateLayerMask))
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (selectedWall == null)
+                {
+                    Instantiate(GateModelTransform, GateModelTransform.position, GateModelTransform.rotation);
+                }
+                else
+                {
+                    DestroyImmediate(selectedWall);
+                    Instantiate(GateModelTransform, GateModelTransform.position, GateModelTransform.rotation);
+                }
+                CancelGenerateGate();
+            }
+            else if(hit.transform.CompareTag(WALLTAG))
+            {
+                GateModelTransform.transform.position = hit.transform.position;
+                GateModelTransform.transform.rotation = hit.transform.rotation;
+            }
+            else
+            {
+                GateModelTransform.position = hit.point;
+                if (isSnapped)
+                {
+                    isSnapped = false;
+                    GateModelTransform.rotation = Quaternion.identity;
+                }
+            }
+        }
     }
 
     private void CancelGenerateGate()
     {
+        isSnapped = false;
+        selectedWall = null;
 
+        GateModelCollider.enabled = false;
+        GateModelTransform.gameObject.SetActive(false);
     }
     #endregion
 
