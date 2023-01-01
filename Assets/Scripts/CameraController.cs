@@ -18,6 +18,8 @@ public class CameraController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha1))
             wallGenerator.StartInstallWall();
         if (Input.GetKeyDown(KeyCode.Alpha2))
+            wallGenerator.StartInstallGate();
+        if (Input.GetKeyDown(KeyCode.Alpha3))
             wallGenerator.StartRemoveWall();
     }
 

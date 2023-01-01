@@ -451,16 +451,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MainCamera: {fileID: 330585545}
-  TargetModelTransform: {fileID: 2191008990989827615}
-  TargetBodyTransform: {fileID: 401453270}
-  WallPrefabTransform: {fileID: 2191008990824360119, guid: 7a86238584ae01f4f8cc8d0766834a93,
-    type: 3}
-  TargetCollider: {fileID: 3719969555447156130, guid: 4ce52febfee73194cb3b85cd8ccc0ac5,
+  PoleCollider: {fileID: 3719969555447156130, guid: 4ce52febfee73194cb3b85cd8ccc0ac5,
     type: 3}
   ModelCollider: {fileID: 1325867413}
+  WallModelTransform: {fileID: 2191008990989827615}
+  WallBodyTransform: {fileID: 401453270}
+  WallPrefabTransform: {fileID: 2191008990824360119, guid: 7a86238584ae01f4f8cc8d0766834a93,
+    type: 3}
   WallRadius: 3
   GenerateLayerMask: 0400000040000000
   RemoveLayerMask: 0100000004000000
+  GateModelTransform: {fileID: 0}
   ModelMaterial: {fileID: 2100000, guid: e57f07fb7b2ab74419d88eb592177c55, type: 2}
   WallColor: {r: 0.5568628, g: 0.5568628, b: 0.5568628, a: 1}
   SelectColor: {r: 0.9788537, g: 1, b: 0, a: 1}
@@ -1086,7 +1087,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  tagCollider: {fileID: 1325867414}
 --- !u!65 &1325867414
 BoxCollider:
   m_ObjectHideFlags: 0
