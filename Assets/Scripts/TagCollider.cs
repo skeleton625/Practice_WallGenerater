@@ -35,6 +35,7 @@ public class TagCollider : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
+        Debug.Log(other.name);
         if (other.CompareTag(TagName) && !IsConflict)
         {
             IsConflict = true;

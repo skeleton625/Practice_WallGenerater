@@ -17,8 +17,8 @@ public class WallGenerator : MonoBehaviour
     [SerializeField] private Transform WallPrefabTransform = null;
     [SerializeField] private TagCollider WallModelCollider = null;
     [SerializeField] private float WallRadius = 0f;
-    [SerializeField] private int[] GenerateLayerMask = null;
-    [SerializeField] private int[] RemoveLayerMask = null;
+    [SerializeField] private int[] ExceptGenWallMask = null;
+    [SerializeField] private int[] ExceptRemoveMask = null;
     [Space(10)]
 
     private bool isDragging = false;
@@ -30,7 +30,7 @@ public class WallGenerator : MonoBehaviour
     private int prevWallRange = 0;
     private int prevConnectHashCode = 0;
 
-    private int generateLayerMask = 0;
+    private int generateWallLayerMask = 0;
     private int removeLayerMask = 0;
 
     private Vector3 startPosition = Vector3.zero;
@@ -39,10 +39,16 @@ public class WallGenerator : MonoBehaviour
 
     [Header("Gate Setting")]
     [SerializeField] private Transform GateModelTransform = null;
+    [SerializeField] private Transform GateBodyTransform = null;
     [SerializeField] private TagCollider GateModelCollider = null;
+    [SerializeField] private Transform GatePrefabTransform = null;
+    [SerializeField] private int[] ExceptGenGateMask = null;
     [Space(10)]
 
     private bool isSnapped = false;
+
+    private int generateGateLayerMask = 0;
+
     private Transform selectedWall = null;
 
     [Header("Material Setting")]
@@ -59,13 +65,17 @@ public class WallGenerator : MonoBehaviour
 
     private void Start()
     {
-        for (int i = 0; i < GenerateLayerMask.Length; ++i)
-            generateLayerMask += GenerateLayerMask[i];
-        generateLayerMask = ~generateLayerMask;
+        for (int i = 0; i < ExceptGenWallMask.Length; ++i)
+            generateWallLayerMask += ExceptGenWallMask[i];
+        generateWallLayerMask = ~generateWallLayerMask;
 
-        for (int i = 0; i < RemoveLayerMask.Length; ++i)
-            removeLayerMask += RemoveLayerMask[i];
+        for (int i = 0; i < ExceptRemoveMask.Length; ++i)
+            removeLayerMask += ExceptRemoveMask[i];
         removeLayerMask = ~removeLayerMask;
+
+        for (int i = 0; i < ExceptGenGateMask.Length; ++i)
+            generateGateLayerMask += ExceptGenGateMask[i];
+        generateGateLayerMask = ~generateGateLayerMask;
     }
 
     private void Update()
@@ -77,10 +87,10 @@ public class WallGenerator : MonoBehaviour
                 DragWallModel();
                 break;
             case 2:
-                RemoveWall();
+                MoveGateModel();
                 break;
             case 3:
-                MoveGateModel();
+                RemoveWall();
                 break;
         }
 
@@ -92,10 +102,10 @@ public class WallGenerator : MonoBehaviour
                     CancelGenerateWall();
                     break;
                 case 2:
-                    CancelRemoveWall();
+                    CancelGenerateGate();
                     break;
                 case 3:
-                    CancelGenerateGate();
+                    CancelRemoveWall();
                     break;
             }
         }
@@ -121,6 +131,7 @@ public class WallGenerator : MonoBehaviour
         {
             generateType = 2;
             WorkingUI.SetGenerateType(2);
+            ModelMaterial.SetColor(MATERIALCOLOR, Color.green);
 
             GateModelTransform.gameObject.SetActive(true);
             GateModelCollider.enabled = true;
@@ -143,7 +154,7 @@ public class WallGenerator : MonoBehaviour
         if (isDragging) return;
 
         var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateLayerMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateWallLayerMask))
         {
             Vector3 position;
             if (hit.transform.CompareTag(CONNECTTAG))
@@ -202,7 +213,7 @@ public class WallGenerator : MonoBehaviour
         if (!isDragging) return;
 
         var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateLayerMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateWallLayerMask))
         {
             if (Input.GetMouseButtonUp(0))
             {
@@ -254,7 +265,7 @@ public class WallGenerator : MonoBehaviour
             {
                 if (isConnectLast)
                 {
-                    if (prevConnectHashCode.Equals(hit.transform.GetHashCode()) || !hit.transform.CompareTag(CONNECTTAG))
+                    if (!(prevConnectHashCode.Equals(hit.transform.GetHashCode()) && hit.transform.CompareTag(CONNECTTAG)))
                     {
                         isConnectLast = false;
                         if (preWallRange.Equals(0)) WallModelTransform.gameObject.SetActive(false);
@@ -406,34 +417,59 @@ public class WallGenerator : MonoBehaviour
     private void MoveGateModel()
     {
         var ray = MainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateLayerMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000, generateGateLayerMask))
         {
-            if (Input.GetMouseButtonDown(0))
+            if (!GateModelCollider.IsConflict && Input.GetMouseButtonDown(0))
             {
                 if (selectedWall == null)
                 {
-                    Instantiate(GateModelTransform, GateModelTransform.position, GateModelTransform.rotation);
+                    Instantiate(GatePrefabTransform, GateBodyTransform.position, GateBodyTransform.rotation);
                 }
                 else
                 {
-                    DestroyImmediate(selectedWall);
-                    Instantiate(GateModelTransform, GateModelTransform.position, GateModelTransform.rotation);
+                    DestroyImmediate(selectedWall.gameObject);
+                    Instantiate(GatePrefabTransform, GateBodyTransform.position, GateBodyTransform.rotation);
+                    selectedWall = null;
                 }
                 CancelGenerateGate();
+                return;
+            }
+
+            if (isSnapped)
+            {
+                if (!(hit.transform.CompareTag(WALLTAG) && prevConnectHashCode.Equals(hit.transform.GetHashCode())))
+                {
+                    isSnapped = false;
+                    selectedWall.GetChild(0).gameObject.SetActive(true);
+                }
+                return;
             }
             else if(hit.transform.CompareTag(WALLTAG))
             {
-                GateModelTransform.transform.position = hit.transform.position;
-                GateModelTransform.transform.rotation = hit.transform.rotation;
+                isSnapped = true;
+                GateModelCollider.enabled = false;
+                selectedWall = hit.transform;
+                selectedWall.GetChild(0).gameObject.SetActive(false);
+
+                prevConnectHashCode = selectedWall.GetHashCode();
+
+                GateBodyTransform.transform.position = hit.transform.position;
+                GateBodyTransform.transform.rotation = hit.transform.rotation;
             }
             else
             {
-                GateModelTransform.position = hit.point;
                 if (isSnapped)
                 {
                     isSnapped = false;
-                    GateModelTransform.rotation = Quaternion.identity;
+                    GateModelCollider.enabled = true;
+                    selectedWall.GetChild(0).gameObject.SetActive(true);
+                    selectedWall = null;
                 }
+
+                var position = hit.point;
+                position.y = 1f;
+
+                GateBodyTransform.position = position;
             }
         }
     }
@@ -441,10 +477,17 @@ public class WallGenerator : MonoBehaviour
     private void CancelGenerateGate()
     {
         isSnapped = false;
-        selectedWall = null;
+        if (selectedWall != null)
+        {
+            selectedWall.GetChild(0).gameObject.SetActive(true);
+            selectedWall = null;
+        }
 
         GateModelCollider.enabled = false;
         GateModelTransform.gameObject.SetActive(false);
+
+        WorkingUI.SetGenerateType(0);
+        generateType = 0;
     }
     #endregion
 
