@@ -6,6 +6,7 @@ public class TagCollider : MonoBehaviour
 {
     [Header("Conflict Setting")]
     [SerializeField] private string TagName = "";
+    [SerializeField] private string ExceptName = "";
     [SerializeField] private UnityEvent StayEvent = null;
     [SerializeField] private UnityEvent ExitEvent = null;
 
@@ -35,8 +36,7 @@ public class TagCollider : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        Debug.Log(other.name);
-        if (other.CompareTag(TagName) && !IsConflict)
+        if (other.CompareTag(TagName) && !(IsConflict || other.CompareTag(ExceptName)))
         {
             IsConflict = true;
             StayEvent.Invoke();
